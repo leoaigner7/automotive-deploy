@@ -27,11 +27,12 @@ jobs:
 
       - name: Build backend image
         run: |
-          docker build -t local/deploy-backend:$(cat VERSION) -f ops/docker/Dockerfile.backend .
-
+          VER=$(cat VERSION 2>/dev/null || echo "0.0.1")
+          docker build -t local/deploy-backend:$VER backend
       - name: Build frontend image
         run: |
-          docker build -t local/deploy-frontend:$(cat VERSION) -f ops/docker/Dockerfile.frontend .
+          VER=$(cat VERSION 2>/dev/null || echo "0.0.1")
+          docker build -t local/deploy-frontend:$VER frontend
 
       - name: Run smoke test
         run: |
