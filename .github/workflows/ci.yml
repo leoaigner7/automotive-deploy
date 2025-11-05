@@ -1,0 +1,55 @@
+name: CI/CD Build & Offline Bundle
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build hello-service image
+        run: |
+          docker build -t local/hello-service:$(cat VERSION) hello-service
+
+      - name: Build backend image
+        run: |
+          docker build -t local/deploy-backend:$(cat VERSION) -f ops/docker/Dockerfile.backend .
+
+      - name: Build frontend image
+        run: |
+          docker build -t local/deploy-frontend:$(cat VERSION) -f ops/docker/Dockerfile.frontend .
+
+      - name: Run smoke test
+        run: |
+          docker compose -f ops/compose/docker-compose.yml up -d
+          sleep 5
+          bash ops/scripts/smoke_test.sh
+          docker compose -f ops/compose/docker-compose.yml down
+
+      - name: Pack offline bundle
+        run: |
+          chmod +x ops/scripts/*.sh
+          bash ops/scripts/pack.sh
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-bundle
+          path: |
+            out/artifact-*.tar.gz
+            out/checksums.txt
+
