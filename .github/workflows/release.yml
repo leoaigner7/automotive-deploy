@@ -1,0 +1,96 @@
+name: Release (Self-Service)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # Release wird durch Tag ausgelöst, z.B. v1.2.3
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure VERSION matches tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "Tag: $TAG"
+          echo "$TAG" > VERSION
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build hello-service
+        run: |
+          VER=$(cat VERSION)
+          docker build -t local/hello-service:$VER hello-service
+
+      - name: Build backend
+        run: |
+          VER=$(cat VERSION)
+          docker build -t local/deploy-backend:$VER backend
+
+      - name: Build frontend
+        run: |
+          VER=$(cat VERSION)
+          docker build -t local/deploy-frontend:$VER frontend
+
+      - name: Smoke test (compose)
+        run: |
+          docker compose -f ops/compose/docker-compose.yml up -d
+          sleep 5
+          bash ops/scripts/smoke_test.sh || (docker compose -f ops/compose/docker-compose.yml logs && false)
+          docker compose -f ops/compose/docker-compose.yml down
+
+      - name: Pack offline bundle
+        run: |
+          chmod +x ops/scripts/*.sh
+          bash ops/scripts/pack.sh
+
+      - name: Import GPG private key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "passphrase=$GPG_PASSPHRASE" >> ~/.gnupg/gpg-pass.conf
+          chmod 600 ~/.gnupg/gpg-pass.conf
+
+      - name: Sign checksums
+        run: |
+          VER=$(cat VERSION)
+          gpg --batch --yes --pinentry-mode loopback --passphrase-file ~/.gnupg/gpg-pass.conf \
+            --output out/checksums.txt.sig --detach-sign out/checksums.txt
+          ls -l out
+
+      - name: (opt) Build ISO (for air-gap mounting)
+        run: |
+          sudo apt-get update && sudo apt-get install -y genisoimage
+          VER=$(cat VERSION)
+          mkdir -p out/iso
+          cp out/artifact-$VER.tar.gz out/checksums.txt out/checksums.txt.sig out/iso/
+          genisoimage -o out/offline-bundle-$VER.iso out/iso
+
+      - name: Create GitHub Release & Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            out/artifact-*.tar.gz
+            out/checksums.txt
+            out/checksums.txt.sig
+            out/offline-bundle-*.iso
