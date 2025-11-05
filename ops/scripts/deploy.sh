@@ -5,7 +5,7 @@ SERVICE="$1"
 VERSION="$2"
 NO_SAVE="${3:-""}"
 
-STATE_DIR="$(cd .. && pwd)/state"
+STATE_DIR="/ops/state"
 CURRENT_VERSION_FILE="$STATE_DIR/${SERVICE}.current"
 PREV_VERSION_FILE="$STATE_DIR/${SERVICE}.previous"
 COMPOSE_FILE="/ops/compose/docker-compose.yml"
@@ -19,7 +19,7 @@ fi
 trap 'rm -f "${LOCK_FILE}" || true' EXIT
 
 # Set VERSION in compose .env
-sed -i "s/^VERSION=.*/VERSION=${VERSION}/" /ops/compose/.env || echo "VERSION=${VERSION}" >> /ops/compose/.env
+echo "VERSION=${VERSION}" > /ops/compose/.env
 
 # Save old version
 if [ -f "$CURRENT_VERSION_FILE" ] && [ "${NO_SAVE}" != "--no-save" ]; then
@@ -34,7 +34,33 @@ CID=$(/usr/bin/docker compose -f "$COMPOSE_FILE" ps -q "$SERVICE" 2>/dev/null ||
 /usr/bin/docker rm -f $(/usr/bin/docker ps -aq --filter "name=${SERVICE}") 2>/dev/null || true
 
 echo "🏗️ Building image ${SERVICE}:${VERSION}"
-/usr/bin/docker compose -f "$COMPOSE_FILE" build "$SERVICE"
+
+# Script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Detect project root
+if [ -d "/workspace" ]; then
+  PROJECT_ROOT="/workspace"
+else
+  PROJECT_ROOT="$(realpath "$SCRIPT_DIR/../..")"
+fi
+
+SERVICE_PATH="${PROJECT_ROOT}/${SERVICE}"
+
+if [ ! -d "$SERVICE_PATH" ]; then
+  echo "❌ Fehler: Service-Verzeichnis nicht gefunden: $SERVICE_PATH"
+  exit 1
+fi
+
+echo "🏗️ Building image ${SERVICE}:${VERSION}"
+/usr/bin/docker build -t "${SERVICE}:local" "$SERVICE_PATH"
+
+if [ ! -d "$SERVICE_PATH" ]; then
+  echo "❌ Fehler: Service-Verzeichnis nicht gefunden: $SERVICE_PATH"
+  exit 1
+fi
+
+/usr/bin/docker build -t ${SERVICE}:local "$SERVICE_PATH"
 
 echo "🏷️ Tagging ${SERVICE}:local → ${SERVICE}:${VERSION}"
 /usr/bin/docker tag ${SERVICE}:local ${SERVICE}:${VERSION}
