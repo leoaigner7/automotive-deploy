@@ -1,4 +1,4 @@
-name: Release (Self-Service)
+#name: Release (Self-Service)
 
 on:
   push:
@@ -97,5 +97,5 @@ jobs:
             out/checksums.txt
             out/checksums.txt.sig
             out/offline-bundle-*.iso
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
