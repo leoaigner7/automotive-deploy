@@ -60,17 +60,18 @@ jobs:
       - name: Import GPG private key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
+          mkdir -p ~/.gnupg
           echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo "passphrase=$GPG_PASSPHRASE" >> ~/.gnupg/gpg-pass.conf
-          chmod 600 ~/.gnupg/gpg-pass.conf
+          chmod 700 ~/.gnupg
 
       - name: Sign checksums
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           VER=$(cat VERSION)
-          gpg --batch --yes --pinentry-mode loopback --passphrase-file ~/.gnupg/gpg-pass.conf \
+          echo "$GPG_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
             --output out/checksums.txt.sig --detach-sign out/checksums.txt
           ls -l out
 
