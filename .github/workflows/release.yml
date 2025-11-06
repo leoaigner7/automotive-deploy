@@ -58,15 +58,17 @@ jobs:
         run: |
           chmod +x ops/scripts/*.sh
           bash ops/scripts/pack.sh
-
-      - name: Import GPG private key
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+ 
+      - name: Import GPG key
         run: |
           mkdir -p ~/.gnupg
-          echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
           chmod 700 ~/.gnupg
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "$GPG_PASSPHRASE" > ~/.gnupg/gpg-pass.conf
+          chmod 600 ~/.gnupg/gpg-pass.conf
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Sign checksums
         run: |
@@ -95,3 +97,5 @@ jobs:
             out/checksums.txt
             out/checksums.txt.sig
             out/offline-bundle-*.iso
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
