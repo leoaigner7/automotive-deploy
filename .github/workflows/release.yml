@@ -5,7 +5,9 @@ on:
     tags:
       - 'v*.*.*'   # Release wird durch Tag ausgelöst, z.B. v1.2.3
   workflow_dispatch:
-
+permissions:
+  contents: write
+  packages: write
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -67,11 +69,9 @@ jobs:
           chmod 700 ~/.gnupg
 
       - name: Sign checksums
-        env:
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
           VER=$(cat VERSION)
-          echo "$GPG_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+          gpg --batch --yes --pinentry-mode loopback --passphrase-file ~/.gnupg/gpg-pass.conf \
             --output out/checksums.txt.sig --detach-sign out/checksums.txt
           ls -l out
 
