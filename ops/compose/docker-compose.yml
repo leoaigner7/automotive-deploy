@@ -1,19 +1,15 @@
 services:
   backend:
-    build: ../../backend
+    build:
+      context: ../../backend
     image: backend:latest
     container_name: backend
     ports:
       - "8088:8088"
-    volumes:
-      - ../scripts:/ops/scripts
-      - ../compose:/ops/compose
-      - ../state:/ops/state
-      - ../../:/workspace        # ✅ komplette Repo-Wurzel in Container 
-      - /var/run/docker.sock:/var/run/docker.sock
 
   frontend:
-    build: ../../frontend
+    build:
+      context: ../../frontend
     image: frontend:latest
     container_name: frontend
     ports:
@@ -21,7 +17,7 @@ services:
 
   hello-service:
     build:
-      context: /workspace/hello-service
+      context: ../../hello-service
       dockerfile: Dockerfile
     image: hello-service:${VERSION:-local}
     container_name: hello-service
@@ -29,6 +25,4 @@ services:
       - "9090:9090"
     environment:
       VERSION: ${VERSION}
-    volumes:
-      - ../../state:/ops/state
     pull_policy: never
