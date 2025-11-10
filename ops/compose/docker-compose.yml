@@ -17,11 +17,11 @@ services:
     image: frontend:latest
     container_name: frontend
     ports:
-      - "5173:80"
+      - "5174:80"
 
   hello-service:
     build:
-      context: ../../hello-service
+      context: /workspace/hello-service
       dockerfile: Dockerfile
     image: hello-service:${VERSION:-local}
     container_name: hello-service
