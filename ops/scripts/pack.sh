@@ -23,13 +23,20 @@ if [ -f "$ROOT_DIR/ops/compose/docker-compose.yml" ]; then
   done
 fi
 
+# Workspace-Ordner hinzufügen (Services)
+mkdir -p "$ROOT_DIR/workspace"
+cp -r "$ROOT_DIR/hello-service" "$ROOT_DIR/workspace/" 2>/dev/null || echo "⚠️ hello-service nicht gefunden"
+cp -r "$ROOT_DIR/backend" "$ROOT_DIR/workspace/" 2>/dev/null || echo "⚠️ backend nicht gefunden"
+cp -r "$ROOT_DIR/frontend" "$ROOT_DIR/workspace/" 2>/dev/null || echo "⚠️ frontend nicht gefunden"
+
 # Artefakte sammeln
 tar -czf "$OUT_DIR/artifact-${VERSION}.tar.gz" \
-  -C "$ROOT_DIR" ops/compose \
-                 ops/scripts \
-                 config \
-                 VERSION \
-                 README.md 2>/dev/null || true
+    -C "$ROOT_DIR" ops/compose \
+    ops/scripts \
+    config \
+    workspace \
+    VERSION \
+    README.md 2>/dev/null || true
 
 # Checksum erzeugen
 (cd "$OUT_DIR" && sha256sum artifact-${VERSION}.tar.gz > checksums.txt)
