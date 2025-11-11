@@ -1,15 +1,19 @@
 services:
   backend:
-    build:
-      context: ../../backend
+    build: ../../backend
     image: backend:latest
     container_name: backend
     ports:
       - "8088:8088"
+    volumes:
+      - ../scripts:/ops/scripts
+      - ../compose:/ops/compose
+      - ../state:/ops/state
+      - ../../:/workspace        # ✅ komplette Repo-Wurzel in Container 
+      - /var/run/docker.sock:/var/run/docker.sock
 
   frontend:
-    build:
-      context: ../../frontend
+    build: ../../frontend
     image: frontend:latest
     container_name: frontend
     ports:
@@ -25,4 +29,6 @@ services:
       - "9090:9090"
     environment:
       VERSION: ${VERSION}
+    volumes:
+      - ../../state:/ops/state
     pull_policy: never
