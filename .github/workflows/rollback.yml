@@ -1,0 +1,27 @@
+name: Rollback (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version zum Rollback (z.B. v1.0.7)"
+        required: true
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Deploy rollback
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST_SSH }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /opt/automotive
+            export BACKEND_TAG=${{ github.event.inputs.version }}
+            export FRONTEND_TAG=${{ github.event.inputs.version }}
+            bash ops/scripts/rollback.sh ${{ github.event.inputs.version }}

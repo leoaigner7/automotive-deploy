@@ -42,6 +42,18 @@ app.get("/version", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({ ok: true, msg: "Backend läuft ✅" });
 });
+// --- Logs-Endpunkt (Mock) ---
+app.get("/logs", (req, res) => {
+  const service = req.query.service || "unknown";
+  const sampleLog = `
+[${new Date().toISOString()}] [${service}] Build gestartet...
+[${new Date().toISOString()}] [${service}] Dockerfile gefunden.
+[${new Date().toISOString()}] [${service}] Image erfolgreich gebaut.
+[${new Date().toISOString()}] [${service}] Deployment abgeschlossen! ✅
+  `;
+  res.type("text/plain").send(sampleLog);
+});
 
 const port = process.env.PORT || 8088;
 app.listen(port, "0.0.0.0", () => console.log(`✅ Backend läuft auf Port ${port}`));
+

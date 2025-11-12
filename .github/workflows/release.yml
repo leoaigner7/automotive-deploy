@@ -47,6 +47,24 @@ jobs:
           VER=$(cat VERSION)
           docker build -t local/deploy-frontend:$VER frontend
 
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push all images to GHCR
+        run: |
+          VER=$(cat VERSION)
+          docker tag local/hello-service:$VER ghcr.io/${{ github.repository_owner }}/automotive-hello:$VER
+          docker tag local/deploy-backend:$VER ghcr.io/${{ github.repository_owner }}/automotive-backend:$VER
+          docker tag local/deploy-frontend:$VER ghcr.io/${{ github.repository_owner }}/automotive-frontend:$VER
+
+          docker push ghcr.io/${{ github.repository_owner }}/automotive-hello:$VER
+          docker push ghcr.io/${{ github.repository_owner }}/automotive-backend:$VER
+          docker push ghcr.io/${{ github.repository_owner }}/automotive-frontend:$VER
+
       - name: Smoke test (compose)
         run: |
           docker compose -f ops/compose/docker-compose.yml up -d
@@ -96,6 +114,7 @@ jobs:
             out/artifact-*.tar.gz
             out/checksums.txt
             out/checksums.txt.sig
+            out/images-*.tar.gz
             out/offline-bundle-*.iso
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
